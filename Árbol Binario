@@ -1,0 +1,208 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Estructura del nodo para representar una película
+struct Pelicula {
+    char nombre[100];
+    int anio;
+    char genero[50];
+    float recaudacion;
+    struct Pelicula *izq;
+    struct Pelicula *der;
+};
+
+// Puntero global a la raíz del árbol
+struct Pelicula *raiz = NULL;
+
+// Función para crear una nueva película
+struct Pelicula* crearPelicula() {
+    struct Pelicula *nueva = (struct Pelicula*)malloc(sizeof(struct Pelicula));
+    
+    // Solicita los datos al usuario
+    printf("Nombre de la película: ");
+    getchar(); // limpiar buffer
+    fgets(nueva->nombre, 100, stdin);
+    nueva->nombre[strcspn(nueva->nombre, "\n")] = '\0'; // eliminar salto de línea
+
+    printf("Año de realización: ");
+    scanf("%d", &nueva->anio);
+
+    printf("Género: ");
+    getchar();
+    fgets(nueva->genero, 50, stdin);
+    nueva->genero[strcspn(nueva->genero, "\n")] = '\0';
+
+    printf("Recaudación (en millones): ");
+    scanf("%f", &nueva->recaudacion);
+
+    nueva->izq = nueva->der = NULL; // Inicializa los punteros
+
+    return nueva;
+}
+
+// Función para insertar una película en el árbol
+struct Pelicula* insertar(struct Pelicula* raiz, struct Pelicula* nueva) {
+    if (raiz == NULL) return nueva;
+
+    // Si el año de la nueva película es menor, va a la izquierda
+    if (nueva->anio < raiz->anio)
+        raiz->izq = insertar(raiz->izq, nueva);
+    // Si el año es mayor, va a la derecha
+    else if (nueva->anio > raiz->anio)
+        raiz->der = insertar(raiz->der, nueva);
+    // Si el año es igual, también va a la izquierda (según la regla)
+    else
+        raiz->izq = insertar(raiz->izq, nueva);
+
+    return raiz;
+}
+
+// Recorridos
+void inorden(struct Pelicula *r) {
+    if (r == NULL) return;
+    inorden(r->izq);
+    printf("%s (%d) - %s - %.2fM\n", r->nombre, r->anio, r->genero, r->recaudacion);
+    inorden(r->der);
+}
+
+void preorden(struct Pelicula *r) {
+    if (r == NULL) return;
+    printf("%s (%d) - %s - %.2fM\n", r->nombre, r->anio, r->genero, r->recaudacion);
+    preorden(r->izq);
+    preorden(r->der);
+}
+
+void posorden(struct Pelicula *r) {
+    if (r == NULL) return;
+    posorden(r->izq);
+    posorden(r->der);
+    printf("%s (%d) - %s - %.2fM\n", r->nombre, r->anio, r->genero, r->recaudacion);
+}
+
+// Función para buscar una película por su nombre
+void buscarPorNombre(struct Pelicula *r, const char *nombre) {
+    if (r == NULL) return;
+
+    buscarPorNombre(r->izq, nombre);
+
+    if (strcmp(r->nombre, nombre) == 0)
+        printf("Encontrado: %s (%d) - %s - %.2fM\n", r->nombre, r->anio, r->genero, r->recaudacion);
+
+    buscarPorNombre(r->der, nombre);
+}
+
+// Mostrar películas por género
+void mostrarPorGenero(struct Pelicula *r, const char *genero) {
+    if (r == NULL) return;
+
+    mostrarPorGenero(r->izq, genero);
+
+    if (strcmp(r->genero, genero) == 0)
+        printf("%s (%d) - %.2fM\n", r->nombre, r->anio, r->recaudacion);
+
+    mostrarPorGenero(r->der, genero);
+}
+
+// Encuentra las 3 películas con menor recaudación
+void encontrarFracasos(struct Pelicula *r, struct Pelicula **top3, int *n) {
+    if (r == NULL) return;
+
+    encontrarFracasos(r->izq, top3, n);
+
+    if (*n < 3) {
+        top3[*n] = r;
+        (*n)++;
+    } else {
+        for (int i = 0; i < 3; ++i) {
+            if (r->recaudacion < top3[i]->recaudacion) {
+                top3[i] = r;
+                break;
+            }
+        }
+    }
+
+    encontrarFracasos(r->der, top3, n);
+}
+
+// Liberar la memoria del árbol antes de salir
+void liberar(struct Pelicula *r) {
+    if (r == NULL) return;
+    liberar(r->izq);
+    liberar(r->der);
+    free(r);
+}
+
+// Menú principal
+int main() {
+    int opcion;
+    char nombreBuscar[100], generoBuscar[50];
+    struct Pelicula *top3[3] = {NULL, NULL, NULL};
+    int count = 0;
+
+    do {
+        printf("\n==== MENÚ ====\n");
+        printf("1. Agregar película\n");
+        printf("2. Mostrar recorrido Inorden\n");
+        printf("3. Mostrar recorrido Preorden\n");
+        printf("4. Mostrar recorrido Posorden\n");
+        printf("5. Buscar película por nombre\n");
+        printf("6. Mostrar películas por género\n");
+        printf("7. Mostrar 3 fracasos taquilleros\n");
+        printf("8. Salir\n");
+        printf("Opción: ");
+        scanf("%d", &opcion);
+
+        switch (opcion) {
+            case 1: {
+                // Agrega nueva película al árbol
+                struct Pelicula *nueva = crearPelicula();
+                raiz = insertar(raiz, nueva);
+                break;
+            }
+            case 2:
+                printf("\n--- Recorrido Inorden ---\n");
+                inorden(raiz);
+                break;
+            case 3:
+                printf("\n--- Recorrido Preorden ---\n");
+                preorden(raiz);
+                break;
+            case 4:
+                printf("\n--- Recorrido Posorden ---\n");
+                posorden(raiz);
+                break;
+            case 5:
+                printf("Nombre de la película a buscar: ");
+                getchar();
+                fgets(nombreBuscar, 100, stdin);
+                nombreBuscar[strcspn(nombreBuscar, "\n")] = '\0';
+                buscarPorNombre(raiz, nombreBuscar);
+                break;
+            case 6:
+                printf("Género a buscar: ");
+                getchar();
+                fgets(generoBuscar, 50, stdin);
+                generoBuscar[strcspn(generoBuscar, "\n")] = '\0';
+                mostrarPorGenero(raiz, generoBuscar);
+                break;
+            case 7:
+                count = 0;
+                top3[0] = top3[1] = top3[2] = NULL;
+                encontrarFracasos(raiz, top3, &count);
+                printf("Top 3 fracasos taquilleros:\n");
+                for (int i = 0; i < count; i++)
+                    printf("%s (%d) - %s - %.2fM\n", top3[i]->nombre, top3[i]->anio, top3[i]->genero, top3[i]->recaudacion);
+                break;
+            case 8:
+                liberar(raiz);
+                printf("Memoria liberada. Saliendo...\n");
+                break;
+            default:
+                printf("Opción inválida.\n");
+        }
+
+    } while (opcion != 8);
+
+    return 0;
+}
